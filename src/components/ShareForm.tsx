@@ -112,7 +112,8 @@ export default function ShareForm() {
         })
       }
       
-      setShareLink(result.url)
+      const shareUrl = `${window.location.origin}/${result.token}`
+      setShareLink(shareUrl)
       setExpiresAt(expires)
     } catch (error) {
       console.error('Error creating share:', error)
