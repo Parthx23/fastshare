@@ -10,9 +10,9 @@ export default function Home() {
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    // Initialize AdSense ads after component mount
-    if (typeof window !== 'undefined' && window.adsbygoogle) {
-      window.adsbygoogle.push({})
+    if (typeof window !== 'undefined') {
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adsbygoogle.push({});
     }
   }, [])
 
