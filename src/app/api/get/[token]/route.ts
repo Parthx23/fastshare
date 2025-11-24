@@ -4,10 +4,10 @@ import { promises as fs } from 'fs'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { token: string } }
 ) {
   try {
-    const item = await getItem(params.id)
+    const item = await getItem(params.token)
     
     if (!item) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
