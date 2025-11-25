@@ -15,7 +15,7 @@ function generateToken(): string {
 
 function validateFileSize(fileData: string): boolean {
   const sizeInBytes = (fileData.length * 3) / 4;
-  return sizeInBytes <= 10 * 1024 * 1024;
+  return sizeInBytes <= 50 * 1024 * 1024;
 }
 
 /* ------------------------------- Create Share ------------------------------- */
