@@ -1,7 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { encrypt, decrypt, sanitizeText } from "./encryption";
-import { api } from "./_generated/api";
 
 /* ------------------------------- Helpers ------------------------------- */
 
@@ -15,8 +14,8 @@ function generateToken(): string {
 }
 
 function validateFileSize(fileData: string): boolean {
-  const sizeInBytes = (fileData.length * 3) / 4; // base64 → bytes
-  return sizeInBytes <= 10 * 1024 * 1024; // 10MB
+  const sizeInBytes = (fileData.length * 3) / 4;
+  return sizeInBytes <= 10 * 1024 * 1024;
 }
 
 /* ------------------------------- Create Share ------------------------------- */
@@ -32,19 +31,19 @@ export const createShare = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
-    const expiresAt = args.expiresAt || now + 60 * 60 * 1000;
+    const expiresAt = args.expiresAt || now + 3600 * 1000;
 
     let dataToEncrypt: string;
     let fileSize: number | undefined;
 
     if (args.type === "file") {
-      if (!args.fileData) throw new Error("File data required for file type");
-      if (!validateFileSize(args.fileData)) throw new Error("File size exceeds 10MB limit");
+      if (!args.fileData) throw new Error("File data required");
+      if (!validateFileSize(args.fileData)) throw new Error("File exceeds 10MB");
 
       dataToEncrypt = args.fileData;
       fileSize = (args.fileData.length * 3) / 4;
     } else {
-      if (!args.text) throw new Error("Text required for text type");
+      if (!args.text) throw new Error("Text required");
       dataToEncrypt = sanitizeText(args.text);
     }
 
@@ -71,7 +70,8 @@ export const createShare = mutation({
       expiresAt,
     });
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     return { token, url: `${baseUrl}/${token}`, shareId };
   },
@@ -112,55 +112,21 @@ export const fetchShare = query({
   },
 });
 
-/* ------------------------------- Legacy Query (fixed) ------------------------------- */
-
-export const getShare = query({
-  args: { token: v.string() },
-  handler: async (ctx, args) => {
-    let result: any;
-
-    try {
-      // Preferred modern API reference
-      result = await ctx.runQuery(api.shares.fetchShare, {
-        token: args.token,
-      });
-    } catch (err) {
-      // Fallback (NO TypeScript error)
-      // @ts-ignore
-      result = await ctx.runQuery("shares:fetchShare", {
-        token: args.token,
-      });
-    }
-
-    if (!result) return null;
-
-    return {
-      token: args.token,
-      content: result.type === "text" ? result.text : result.fileData,
-      filename: result.type === "file" ? result.filename : undefined,
-      fileType: result.type === "file" ? result.fileType : undefined,
-      createdAt: result.createdAt,
-      expiresAt: result.expiresAt,
-    };
-  },
-});
-
-/* ------------------------------- Cleanup Mutation ------------------------------- */
+/* ------------------------------- Cleanup ------------------------------- */
 
 export const deleteExpiredShares = mutation({
   handler: async (ctx) => {
     const now = Date.now();
-
-    const expiredShares = await ctx.db
+    const expired = await ctx.db
       .query("shares")
       .withIndex("by_expiry")
       .filter((q) => q.lt(q.field("expiresAt"), now))
       .collect();
 
-    for (const share of expiredShares) {
+    for (const share of expired) {
       await ctx.db.delete(share._id);
     }
 
-    return { deleted: expiredShares.length };
+    return { deleted: expired.length };
   },
 });
